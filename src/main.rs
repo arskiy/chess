@@ -42,7 +42,7 @@ fn main() -> Result<(), String> {
 
     let mut event_pump = context.event_pump()?;
 
-    canvas.set_draw_color(Color::RGB(0xFF, 0xCE, 0x9E));
+    canvas.set_draw_color(Color::RGB(0xD1, 0x8B, 0x47));
     canvas.clear();
 
     let texture_creator = canvas.texture_creator();
@@ -113,7 +113,7 @@ fn main() -> Result<(), String> {
        println!("{:#?}", board.turn());
        }*/
 
-    canvas.set_draw_color(Color::RGB(0xD1, 0x8B, 0x47));
+    canvas.set_draw_color(Color::RGB(0xFF, 0xCE, 0x9E));
     draw_grid(&mut canvas);
 
     draw_pieces(&mut canvas);
@@ -173,10 +173,10 @@ fn draw_piece(canvas: &mut Canvas<Window>, board: &Chess, texture: &Texture, i: 
 fn draw_grid(canvas: &mut Canvas<Window>) {
     let mut row = 0;
 
-    while row < 9 {
-        let mut x = row % 2 - 1;
+    while row < 8 {
+        let mut x = row % 2;
 
-        for _ in (row % 2)..(5 + (row % 2)) {
+        for _ in (row % 2)..(4 + (row % 2)) {
             let rect = Rect::new(
                 x * SQR_SIZE as i32,
                 row * SQR_SIZE as i32,
