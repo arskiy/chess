@@ -9,9 +9,10 @@ use sdl2::rect::Rect;
 use sdl2::render::{Canvas, Texture};
 use sdl2::video::Window;
 
-use shakmaty::{Chess, Role, Setup};
+use shakmaty::{Chess, Role, Setup, Square, Rank, File};
 
 use std::path::Path;
+use std::collections::HashSet;
 
 const SCR_WIDTH: u32 = 600;
 
@@ -40,7 +41,7 @@ fn main() -> Result<(), String> {
         .build()
         .map_err(|e| e.to_string())?;
 
-    let mut event_pump = context.event_pump()?;
+    let mut events = context.event_pump()?;
 
     canvas.set_draw_color(Color::RGB(0xD1, 0x8B, 0x47));
     canvas.clear();
@@ -68,7 +69,8 @@ fn main() -> Result<(), String> {
     let b_q = texture_creator.load_texture(Path::new("sprites/q.png"))?;
     let b_r = texture_creator.load_texture(Path::new("sprites/r.png"))?;
 
-    // Abandon all hope, ye who enter here.
+    let nothing = texture_creator.load_texture(Path::new("sprites/nothing.png"))?;
+
     // This will parse and draw all pieces currently on the game to the window.
     let draw_pieces = |canvas: &mut Canvas<Window>| {
         for i in 0..board.board().pieces().len() {
@@ -100,28 +102,16 @@ fn main() -> Result<(), String> {
     println!("{:#?}", board.board());
     println!("{:?}", board.board().pieces().len());
 
-    /*
-       for i in 0..30 {
-       println!("{:?}", board.board().pieces().nth(i));
-
-       println!("{:?}", board.board().pieces().nth(i).unwrap().0.file().char() as u32 - 'a' as u32);
-       println!("{:?}", board.board().pieces().nth(i).unwrap().1.color);
-
-       println!("{:?}", board.board().pieces().nth(i).unwrap().0.rank().char() as u32 - '1' as u32);
-       println!("{:?}", board.board().pieces().nth(i).unwrap().0.rank().char());
-
-       println!("{:#?}", board.turn());
-       }*/
-
     canvas.set_draw_color(Color::RGB(0xFF, 0xCE, 0x9E));
     draw_grid(&mut canvas);
 
     draw_pieces(&mut canvas);
 
-    canvas.present();
-
+    // I need to set this before the render loop to avoid undefined behaviour,
+    // so we just set an arbritary texture to this by now.
+    let mut curr_texture: &Texture = &nothing;
     'render_loop: loop {
-        for event in event_pump.poll_iter() {
+        for event in events.poll_iter() {
             // if esc is pressed, exit main loop
             // (consequently ending the program)
             match event {
@@ -134,15 +124,81 @@ fn main() -> Result<(), String> {
             }
         }
 
+        let mouse_state = events.mouse_state();
+        let buttons: HashSet<_> = mouse_state.pressed_mouse_buttons().collect();
+
+
+        canvas.set_draw_color(Color::RGB(0xD1, 0x8B, 0x47));
+        canvas.clear();
+
+        canvas.set_draw_color(Color::RGB(0xFF, 0xCE, 0x9E));
+        draw_grid(&mut canvas);
+
+        draw_pieces(&mut canvas);
+
+        // Abandon all hope, ye who enter here.
+        // while a mouse button is pressed, it will fall into this conditional
+        let texture = || {
+            // TODO: use filter here
+            // match is more readable than if let.
+            match board.board().color_at(Square::from_coords(
+                    File::new((mouse_state.x() / SQR_SIZE as i32) as u32), 
+                    Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical())) {
+                Some(color) => if color == shakmaty::Color::White {
+                    match board.board().role_at(Square::from_coords(
+                            File::new((mouse_state.x() / SQR_SIZE as i32) as u32), 
+                            Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical())) {
+                        Some(role) => match role {
+                            Role::King   => &w_k,
+                            Role::Knight => &w_n,
+                            Role::Rook   => &w_r,
+                            Role::Bishop => &w_b,
+                            Role::Queen  => &w_q,
+                            Role::Pawn   => &w_p,
+                        }
+
+                        None => &nothing,
+                    }
+                }
+                else { &nothing }
+                None => &nothing,
+            }
+        };
+
+        if buttons.is_empty() {
+            curr_texture = texture();
+        } else { 
+            canvas.copy(curr_texture, None, Rect::new(
+                    (mouse_state.x() / SQR_SIZE as i32) * SQR_SIZE as i32,
+                    (mouse_state.y() / SQR_SIZE as i32) * SQR_SIZE as i32,
+                    SQR_SIZE,
+                    SQR_SIZE))?;
+        }
+
+        println!("x: {}, y: {}", ((mouse_state.x() / SQR_SIZE as i32) as u32), ((mouse_state.y() / SQR_SIZE as i32) as u32));
+
+        canvas.present();
+
         // if you don't do this cpu usage will skyrocket to 100%
-        event_pump.wait_event_timeout(10);
-        // event_pump.poll_event();
+        events.wait_event_timeout(10);
+        // events.poll_event();
     }
 
     Ok(())
 }
 
 //-----------------------------------------------------------------------------------
+// white = capitalized letters
+//
+// example board:
+// r n b q k b n r
+// p p p p p p p p
+// . . . . . . . .
+// . . . . . . . .
+// . . . . P . . .
+// . . . . . . . .
+// P P P P . P P P
+// R N B Q K B N R
 
 fn draw_piece(canvas: &mut Canvas<Window>, board: &Chess, texture: &Texture, i: usize) {
     canvas
@@ -152,22 +208,12 @@ fn draw_piece(canvas: &mut Canvas<Window>, board: &Chess, texture: &Texture, i: 
             Rect::new(
                 ((board.board().pieces().nth(i).unwrap().0.file().char() as u32 - 'a' as u32)
                  * SQR_SIZE) as i32,
-                 ((board
-                   .board()
-                   .pieces()
-                   .nth(i)
-                   .unwrap()
-                   .0
-                   .rank()
-                   .flip_vertical()
-                   .char() as u32
-                   - '1' as u32) * SQR_SIZE) as i32,
+                 ((board.board().pieces().nth(i).unwrap().0.rank().flip_vertical().char() as u32 - '1' as u32)
+                  * SQR_SIZE) as i32,
                   SQR_SIZE,
                   SQR_SIZE,
                   )).unwrap();
 }
-
-// ----------------------------------------------------------------------------------
 
 // from: https://www.libsdl.org/tmp/SDL/test/testdrawchessboard.c
 fn draw_grid(canvas: &mut Canvas<Window>) {
@@ -191,16 +237,3 @@ fn draw_grid(canvas: &mut Canvas<Window>) {
         row += 1;
     }
 }
-
-//------------------------------------------------------
-// white = capitalized letters
-//
-// example board:
-// r n b q k b n r
-// p p p p p p p p
-// . . . . . . . .
-// . . . . . . . .
-// . . . . P . . .
-// . . . . . . . .
-// P P P P . P P P
-// R N B Q K B N R

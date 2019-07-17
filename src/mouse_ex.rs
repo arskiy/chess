@@ -31,18 +31,14 @@ pub fn main() -> Result<(), String> {
         let state = events.mouse_state();
 
         // Create a set of pressed Keys.
-        let buttons = state.pressed_mouse_buttons().collect();
+        let buttons: HashSet<_> = state.pressed_mouse_buttons().collect();
 
-        // Get the difference between the new and old sets.
-        let new_buttons = &buttons - &prev_buttons;
-        let old_buttons = &prev_buttons - &buttons;
-
-        if !new_buttons.is_empty() || !old_buttons.is_empty() {
-            println!("X = {:?}, Y = {:?} : {:?} -> {:?}", state.x(), state.y(),  new_buttons, old_buttons);
+        if !buttons.is_empty() {
+            // println!("X = {:?}, Y = {:?} : {:?} -> {:?}", state.x(), state.y(),  new_buttons, old_buttons);
+            println!("x: {:?} | y: {:?}", state.x(), state.y());
         }
 
         prev_buttons = buttons;
-        println!("x: {:?} | y: {:?}", state.x(), state.y());
 
         std::thread::sleep(Duration::from_millis(100));
     }
