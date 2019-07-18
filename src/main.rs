@@ -1,5 +1,6 @@
 extern crate sdl2;
 extern crate shakmaty;
+extern crate rand;
 
 use sdl2::event::Event;
 use sdl2::image::{InitFlag, LoadTexture};
@@ -8,6 +9,8 @@ use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::{Canvas, Texture};
 use sdl2::video::Window;
+
+use rand::Rng;
 
 use shakmaty::{Chess, Role, Setup, Square, Rank, File, Move, Position, Board};
 
@@ -106,7 +109,9 @@ fn main() -> Result<(), String> {
 
     // arbitrary to avoid undefined behaviour
     let mut prev_click_pos: Square = Square::A1;
-    let mut role_of_clicked: Role = Role::Pawn;
+
+    let mut prev_role_click: Role = Role::Pawn;
+    let mut curr_role_click: Option<Role> = None;
 
     let mut prev_mouse_buttons = HashSet::new();
 
@@ -135,6 +140,17 @@ fn main() -> Result<(), String> {
         draw_grid(&mut canvas);
 
         draw_pieces(&mut canvas, board.board());
+
+        if board.turn() == shakmaty::Color::Black {
+            let mut rng = rand::thread_rng();
+
+            let index = rng.gen_range(0, board.legals().len());
+
+            match board.to_owned().play(&board.legals()[index]) {
+                Ok(new_board) => board = new_board,
+                Err(_) => (),
+            };
+        }
 
         // Abandon all hope, ye who enter here.
         // while a mouse button is pressed, it will fall into this conditional
@@ -174,33 +190,33 @@ fn main() -> Result<(), String> {
         if board.turn() == shakmaty::Color::White {
             let is_mouse_released = &prev_mouse_buttons - &curr_mouse_buttons;
             if !is_mouse_released.is_empty() {
+                curr_role_click = board.board().role_at(Square::from_coords(
+                    File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
+                    Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical()));
                 curr_click_pos = Square::from_coords(File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
                 Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical());
                 match board.to_owned().play(&Move::Normal {
-                    role: role_of_clicked,
+                    role: prev_role_click,
                     from: prev_click_pos,
                     to: curr_click_pos,
-                    capture: None,
+                    capture: curr_role_click,
                     promotion: None}) {
                     Ok(board_wrap) => board = board_wrap,
                     Err(_) => draw_error(((curr_click_pos.file().char() as u32 - 'a' as u32) * SQR_SIZE) as i32,
-                                         ((curr_click_pos.rank().flip_vertical().char() as u32 - '1' as u32) * SQR_SIZE) as i32,
-                                         &mut canvas,
-                                         0),
+                    ((curr_click_pos.rank().flip_vertical().char() as u32 - '1' as u32) * SQR_SIZE) as i32,
+                    &mut canvas,
+                    0),
                 }
             }
         }
 
         if curr_mouse_buttons.is_empty() {
-            role_of_clicked = board.board().role_at(Square::from_coords(
+            prev_role_click = board.board().role_at(Square::from_coords(
                     File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
                     Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical())).unwrap_or(Role::Knight);
 
             prev_click_pos = Square::from_coords(File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
             Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical());
-
-            // println!("role: {:?} | prev: {:?}", role_of_clicked, prev_click_pos);
-
         } else {
 
             canvas.copy(curr_texture, None, Rect::new(
@@ -267,9 +283,9 @@ fn draw_grid(canvas: &mut Canvas<Window>) {
 // TODO: make this actually work as expected
 
 fn draw_error(x: i32, y: i32, canvas: &mut Canvas<Window>, counter: u8) {
-    if counter == 255 {
-        return
-    }
+    // if counter == 255 {
+    // return
+    // }
 
     canvas.set_draw_color(Color::RGB(255, 0, 0));
     let _ = canvas.fill_rect(Rect::new(
@@ -277,8 +293,8 @@ fn draw_error(x: i32, y: i32, canvas: &mut Canvas<Window>, counter: u8) {
             y,
             SQR_SIZE,
             SQR_SIZE));
-    println!("X: {} | Y: {} | {}", x, y, counter);
+    // println!("X: {} | Y: {} | {}", x, y, counter);
 
     // std::thread::sleep(std::time::Duration::from_millis(2));
-    draw_error(x, y, canvas, counter + 1);
+    // draw_error(x, y, canvas, counter + 1);
 }

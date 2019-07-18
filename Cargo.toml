@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 shakmaty = "0.15.0"
+rand = "0.7.0"
 
 [dependencies.sdl2]
 version = "0.32.0"
