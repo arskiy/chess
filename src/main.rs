@@ -9,7 +9,7 @@ use sdl2::rect::Rect;
 use sdl2::render::{Canvas, Texture};
 use sdl2::video::Window;
 
-use shakmaty::{Chess, Role, Setup, Square, Rank, File};
+use shakmaty::{Chess, Role, Setup, Square, Rank, File, Move, Position, Board};
 
 use std::path::Path;
 use std::collections::HashSet;
@@ -49,7 +49,7 @@ fn main() -> Result<(), String> {
     let texture_creator = canvas.texture_creator();
 
     // define standard board
-    let board = Chess::default();
+    let mut board = Chess::default();
 
     // load white pieces' sprites. (This is using FEN notation.)
     // credits for sprites: Wikimedia Commons
@@ -69,14 +69,15 @@ fn main() -> Result<(), String> {
     let b_q = texture_creator.load_texture(Path::new("sprites/q.png"))?;
     let b_r = texture_creator.load_texture(Path::new("sprites/r.png"))?;
 
+    // completely transparent texture
     let nothing = texture_creator.load_texture(Path::new("sprites/nothing.png"))?;
 
     // This will parse and draw all pieces currently on the game to the window.
-    let draw_pieces = |canvas: &mut Canvas<Window>| {
-        for i in 0..board.board().pieces().len() {
-            match board.board().pieces().nth(i).unwrap().1.color {
+    let draw_pieces = |canvas: &mut Canvas<Window>, board: &Board| {
+        for i in 0..board.pieces().len() {
+            match board.pieces().nth(i).unwrap().1.color {
                 shakmaty::Color::White =>
-                    match board.board().pieces().nth(i).unwrap().1.role {
+                    match board.pieces().nth(i).unwrap().1.role {
                         Role::Pawn   => draw_piece(canvas, &board, &w_p, i),
                         Role::Queen  => draw_piece(canvas, &board, &w_q, i),
                         Role::Bishop => draw_piece(canvas, &board, &w_b, i),
@@ -85,7 +86,7 @@ fn main() -> Result<(), String> {
                         Role::King   => draw_piece(canvas, &board, &w_k, i),
                     },
                 shakmaty::Color::Black =>
-                    match board.board().pieces().nth(i).unwrap().1.role {
+                    match board.pieces().nth(i).unwrap().1.role {
                         Role::Pawn   => draw_piece(canvas, &board, &b_p, i),
                         Role::Queen  => draw_piece(canvas, &board, &b_q, i),
                         Role::Bishop => draw_piece(canvas, &board, &b_b, i),
@@ -100,12 +101,14 @@ fn main() -> Result<(), String> {
 
     // debug
     println!("{:#?}", board.board());
-    println!("{:?}", board.board().pieces().len());
+    println!("{:?}", board.turn());
 
-    canvas.set_draw_color(Color::RGB(0xFF, 0xCE, 0x9E));
-    draw_grid(&mut canvas);
+    let mut curr_click_pos: Square;
+    // arbitrary
+    let mut prev_click_pos: Square = Square::A1;
+    let mut role_of_clicked: Role = Role::Pawn;
 
-    draw_pieces(&mut canvas);
+    let mut prev_mouse_buttons = HashSet::new();
 
     // I need to set this before the render loop to avoid undefined behaviour,
     // so we just set an arbritary texture to this by now.
@@ -125,7 +128,7 @@ fn main() -> Result<(), String> {
         }
 
         let mouse_state = events.mouse_state();
-        let buttons: HashSet<_> = mouse_state.pressed_mouse_buttons().collect();
+        let curr_mouse_buttons: HashSet<_> = mouse_state.pressed_mouse_buttons().collect();
 
 
         canvas.set_draw_color(Color::RGB(0xD1, 0x8B, 0x47));
@@ -134,11 +137,11 @@ fn main() -> Result<(), String> {
         canvas.set_draw_color(Color::RGB(0xFF, 0xCE, 0x9E));
         draw_grid(&mut canvas);
 
-        draw_pieces(&mut canvas);
+        draw_pieces(&mut canvas, &board.board());
 
         // Abandon all hope, ye who enter here.
         // while a mouse button is pressed, it will fall into this conditional
-        let texture = || {
+        let get_texture = || {
             // TODO: use filter here
             // match is more readable than if let.
             match board.board().color_at(Square::from_coords(
@@ -161,13 +164,52 @@ fn main() -> Result<(), String> {
                     }
                 }
                 else { &nothing }
+
                 None => &nothing,
             }
         };
 
-        if buttons.is_empty() {
-            curr_texture = texture();
+        // necessary to make the borrow checker happy.
+        if curr_mouse_buttons.is_empty() {
+            curr_texture = get_texture();
+        }
+
+        // if board.board().piece_at(Square::from_coords(
+                // File::new((mouse_state.x() / SQR_SIZE as i32) as u32), 
+                // Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical())).is_some() {
+            let is_mouse_released = &prev_mouse_buttons - &curr_mouse_buttons;
+            if !is_mouse_released.is_empty() {
+                curr_click_pos = Square::from_coords(File::new((mouse_state.x() / SQR_SIZE as i32) as u32), 
+                                                     Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical());
+                if let Ok(board_wrapped) = board.play(&Move::Normal {
+                    role: role_of_clicked,
+                    from: prev_click_pos,
+                    to: curr_click_pos,
+                    capture: None,
+                    promotion: None}) {
+                    board = board_wrapped;
+                }
+                else {
+                    draw_error(((curr_click_pos.file().char() as u32 - 'a' as u32) * SQR_SIZE) as i32,
+                               ((curr_click_pos.file().char() as u32 - '0' as u32) * SQR_SIZE) as i32,
+                               &mut canvas,
+                               0);
+                }
+            }
+        // }
+
+        if curr_mouse_buttons.is_empty() {
+            role_of_clicked = board.board().role_at(Square::from_coords(
+                    File::new((mouse_state.x() / SQR_SIZE as i32) as u32), 
+                    Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical())).unwrap_or(Role::Knight);
+
+            prev_click_pos = Square::from_coords(File::new((mouse_state.x() / SQR_SIZE as i32) as u32), 
+                                                 Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical());
+
+            println!("role: {:?} | prev: {:?}", role_of_clicked, prev_click_pos);
+
         } else { 
+
             canvas.copy(curr_texture, None, Rect::new(
                     (mouse_state.x() / SQR_SIZE as i32) * SQR_SIZE as i32,
                     (mouse_state.y() / SQR_SIZE as i32) * SQR_SIZE as i32,
@@ -175,40 +217,30 @@ fn main() -> Result<(), String> {
                     SQR_SIZE))?;
         }
 
-        println!("x: {}, y: {}", ((mouse_state.x() / SQR_SIZE as i32) as u32), ((mouse_state.y() / SQR_SIZE as i32) as u32));
-
         canvas.present();
+
+        prev_mouse_buttons = curr_mouse_buttons;
 
         // if you don't do this cpu usage will skyrocket to 100%
         events.wait_event_timeout(10);
         // events.poll_event();
     }
 
+
     Ok(())
 }
 
 //-----------------------------------------------------------------------------------
-// white = capitalized letters
-//
-// example board:
-// r n b q k b n r
-// p p p p p p p p
-// . . . . . . . .
-// . . . . . . . .
-// . . . . P . . .
-// . . . . . . . .
-// P P P P . P P P
-// R N B Q K B N R
 
-fn draw_piece(canvas: &mut Canvas<Window>, board: &Chess, texture: &Texture, i: usize) {
+fn draw_piece(canvas: &mut Canvas<Window>, board: &Board, texture: &Texture, i: usize) {
     canvas
         .copy(
             texture,
             None,
             Rect::new(
-                ((board.board().pieces().nth(i).unwrap().0.file().char() as u32 - 'a' as u32)
+                ((board.pieces().nth(i).unwrap().0.file().char() as u32 - 'a' as u32)
                  * SQR_SIZE) as i32,
-                 ((board.board().pieces().nth(i).unwrap().0.rank().flip_vertical().char() as u32 - '1' as u32)
+                 ((board.pieces().nth(i).unwrap().0.rank().flip_vertical().char() as u32 - '1' as u32)
                   * SQR_SIZE) as i32,
                   SQR_SIZE,
                   SQR_SIZE,
@@ -236,4 +268,22 @@ fn draw_grid(canvas: &mut Canvas<Window>) {
 
         row += 1;
     }
+}
+
+//----------------------------------------------------------------
+
+fn draw_error(x: i32, y: i32, canvas: &mut Canvas<Window>, counter: u8) {
+    if counter == 255 {
+        return
+    }
+
+    canvas.set_draw_color(Color::RGB(255, counter, counter));
+    let rect = Rect::new(x,
+                         y,
+                         SQR_SIZE,
+                         SQR_SIZE);
+    
+    let _ = canvas.fill_rect(rect);
+
+    draw_error(x, y, canvas, counter + 1);
 }
