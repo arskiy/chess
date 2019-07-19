@@ -17,6 +17,9 @@ use shakmaty::{Chess, Role, Setup, Square, Rank, File, Move, Position, Board};
 use std::path::Path;
 use std::collections::HashSet;
 
+mod ai;
+use ai::AI;
+
 const SCR_WIDTH: u32 = 600;
 
 const SQR_SIZE: u32 = SCR_WIDTH / 8;
@@ -25,6 +28,10 @@ fn main() -> Result<(), String> {
     // sdl things
     let context = sdl2::init().unwrap();
     let video = context.video().unwrap();
+
+    let minimax_ai = AI::new();
+    
+    let mut rng = rand::thread_rng();
 
     let _image_context = sdl2::image::init(InitFlag::PNG)?;
 
@@ -141,22 +148,42 @@ fn main() -> Result<(), String> {
 
         draw_pieces(&mut canvas, board.board());
 
+        // higher value possible
+        let mut best_count: i32 = 0;
+
+        // AI
         if board.turn() == shakmaty::Color::Black {
-            let mut rng = rand::thread_rng();
+            let mut best_board: Chess = board.clone();
 
-            let index = rng.gen_range(0, board.legals().len());
 
-            match board.to_owned().play(&board.legals()[index]) {
-                Ok(new_board) => board = new_board,
-                Err(_) => (),
-            };
+            for movement in 0..board.legals().len() {
+                let new_board = board.to_owned().play(&board.legals()[movement]).unwrap();
+                let count = ai::AI::get_values(&new_board.board().pieces());
+
+                println!("mov: {}, current: {}, best: {}", movement, count, best_count);
+
+                // the lesser, the better
+                if count > best_count {
+                    best_count = count;
+                    best_board = new_board;
+                }
+            }
+
+            if best_count == 0 {
+                best_board = best_board.to_owned().play(&best_board.legals()
+                                             [rng.gen_range(0, best_board.legals().len())])
+                                             .unwrap();
+                println!("random move");
+            }
+
+            board = best_board;
         }
 
         // Abandon all hope, ye who enter here.
         // while a mouse button is pressed, it will fall into this conditional
         let get_texture = |board: &Board| {
             // TODO: use filter here
-            // match is more re correct minor mistakesadable than if let.     
+            // match is more readable than if let.     
             match board.color_at(Square::from_coords(
                     File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
                     Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical())) {
@@ -201,7 +228,9 @@ fn main() -> Result<(), String> {
                     to: curr_click_pos,
                     capture: curr_role_click,
                     promotion: None}) {
+
                     Ok(board_wrap) => board = board_wrap,
+
                     Err(_) => draw_error(((curr_click_pos.file().char() as u32 - 'a' as u32) * SQR_SIZE) as i32,
                     ((curr_click_pos.rank().flip_vertical().char() as u32 - '1' as u32) * SQR_SIZE) as i32,
                     &mut canvas,
