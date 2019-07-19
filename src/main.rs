@@ -148,7 +148,7 @@ fn main() -> Result<(), String> {
 
         draw_pieces(&mut canvas, board.board());
 
-        // higher value possible
+        // highest possible value
         let mut best_count: i32 = 0;
 
         // AI
