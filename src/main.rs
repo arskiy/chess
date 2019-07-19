@@ -171,7 +171,7 @@ fn main() -> Result<(), String> {
                 }
             }
 
-            if best_count == 0 {
+            if best_count == prev_count {
                 best_board = best_board.to_owned().play(&best_board.legals()
                                              [rng.gen_range(0, best_board.legals().len())])
                                              .unwrap();
