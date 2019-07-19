@@ -39,8 +39,7 @@ fn main() -> Result<(), String> {
         .window("Chess", SCR_WIDTH, SCR_WIDTH)
         .position_centered()
         .opengl()
-        .build()
-        {
+        .build() {
             Ok(window) => window,
             Err(err) => panic!("failed to create window: {}", err),
         };
