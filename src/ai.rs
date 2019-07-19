@@ -37,28 +37,28 @@ impl AI {
         for i in 0..pieces.len() {
             match pieces.to_owned().nth(i).unwrap().1.role {
                 Role::King => match pieces.to_owned().nth(i).unwrap().1.color {
-                    Color::Black => total += 900,
-                    Color::White => total -= 900,
+                    Color::Black => total -= 900,
+                    Color::White => total += 900,
                 }
 
                 Role::Queen => match pieces.to_owned().nth(i).unwrap().1.color {
-                    Color::Black => total += 90,
-                    Color::White => total -= 90,
+                    Color::Black => total -= 90,
+                    Color::White => total += 90,
                 }
 
                 Role::Rook => match pieces.to_owned().nth(i).unwrap().1.color {
-                    Color::Black => total += 50,
-                    Color::White => total -= 50,
+                    Color::Black => total -= 50,
+                    Color::White => total += 50,
                 }
 
                 Role::Knight | Role::Bishop => match pieces.to_owned().nth(i).unwrap().1.color {
-                    Color::Black => total += 30,
-                    Color::White => total -= 30,
+                    Color::Black => total -= 30,
+                    Color::White => total += 30,
                 }
                 
                 Role::Pawn => match pieces.to_owned().nth(i).unwrap().1.color {
-                    Color::Black => total += 10,
-                    Color::White => total -= 10,
+                    Color::Black => total -= 10,
+                    Color::White => total += 10,
                 }
             }
         }

@@ -82,6 +82,8 @@ fn main() -> Result<(), String> {
     // completely transparent texture
     let nothing = texture_creator.load_texture(Path::new("sprites/nothing.png"))?;
 
+    let mut prev_count: i32 = 0;
+
     // This will parse and draw all pieces currently on the game to the window.
     let draw_pieces = |canvas: &mut Canvas<Window>, board: &Board| {
         for i in 0..board.pieces().len() {
@@ -149,7 +151,7 @@ fn main() -> Result<(), String> {
         draw_pieces(&mut canvas, board.board());
 
         // highest possible value
-        let mut best_count: i32 = 0;
+        let mut best_count: i32 = prev_count;
 
         // AI
         if board.turn() == shakmaty::Color::Black {
@@ -163,7 +165,7 @@ fn main() -> Result<(), String> {
                 println!("mov: {}, current: {}, best: {}", movement, count, best_count);
 
                 // the lesser, the better
-                if count > best_count {
+                if best_count > count {
                     best_count = count;
                     best_board = new_board;
                 }
@@ -177,6 +179,7 @@ fn main() -> Result<(), String> {
             }
 
             board = best_board;
+            prev_count = best_count;
         }
 
         // Abandon all hope, ye who enter here.
