@@ -81,8 +81,6 @@ fn main() -> Result<(), String> {
     // completely transparent texture
     let nothing = texture_creator.load_texture(Path::new("sprites/nothing.png"))?;
 
-    let mut prev_count: i32 = 0;
-
     // This will parse and draw all pieces currently on the game to the window.
     let draw_pieces = |canvas: &mut Canvas<Window>, board: &Board| {
         for i in 0..board.pieces().len() {
@@ -149,37 +147,28 @@ fn main() -> Result<(), String> {
 
         draw_pieces(&mut canvas, board.board());
 
-        // highest possible value
-        let mut best_count: i32 = prev_count;
-
         // AI
+
+        // arbitrary large negative number
+        let mut best_value: i32 = -9999;
+        let mut best_board: Chess = board.clone();
+
         if board.turn() == shakmaty::Color::Black {
-            let mut best_board: Chess = board.clone();
-
-
             for movement in 0..board.legals().len() {
                 let new_board = board.to_owned().play(&board.legals()[movement]).unwrap();
-                let count = ai::AI::get_values(&new_board.board().pieces());
+                let val = -ai::AI::get_values(&new_board.board().pieces());
 
-                println!("mov: {}, current: {}, best: {}", movement, count, best_count);
+                println!("mov: {}, current: {}, best: {}", movement, val, best_value);
 
-                // the lesser, the better
-                if best_count > count {
-                    best_count = count;
+                // the higher (as the value is inverted), the better
+                if val > best_value {
+                    best_value = val;
                     best_board = new_board;
                 }
             }
-
-            if best_count == prev_count {
-                best_board = best_board.to_owned().play(&best_board.legals()
-                                             [rng.gen_range(0, best_board.legals().len())])
-                                             .unwrap();
-                println!("random move");
-            }
-
-            board = best_board;
-            prev_count = best_count;
         }
+
+        board = best_board;
 
         // Abandon all hope, ye who enter here.
         // while a mouse button is pressed, it will fall into this conditional
