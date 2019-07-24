@@ -13,8 +13,6 @@ use shakmaty::{Chess, Role, Setup, Square, Rank, File, Move, Position, Board};
 
 use std::path::Path;
 use std::collections::HashSet;
-use std::cmp::max;
-use std::cmp::min;
 
 mod ai;
 use ai::AI;
@@ -28,8 +26,6 @@ fn main() -> Result<(), String> {
     let context = sdl2::init().unwrap();
     let video = context.video().unwrap();
 
-    let minimax_ai = AI::new();
-    
     let _image_context = sdl2::image::init(InitFlag::PNG)?;
 
     let window = match video
@@ -146,31 +142,9 @@ fn main() -> Result<(), String> {
 
         // AI
 
-        // arbitrary large negative number
-        /*
-        let mut best_value: i32 = -9999;
-        let mut best_board: Chess = game.clone();
-        */
-
         if game.turn() == shakmaty::Color::Black {
-            /*
-            for movement in 0..game.legals().len() {
-                let new_board = game.to_owned().play(&game.legals()[movement]).unwrap();
-                let val = -ai::AI::get_values(&new_board.board().pieces());
-
-                println!("mov: {}, current: {}, best: {}", movement, val, best_value);
-
-                // the higher (as the value is inverted), the better
-                if val > best_value {
-                    best_value = val;
-                    best_board = new_board;
-                }
-            }
-            */
-            game = game.to_owned().play(&minimax_root(2, game)).unwrap();
+            game = game.to_owned().play(&ai::minimax_root(2, game)).unwrap();
         }
-
-        // game = best_board;
 
         // Abandon all hope, ye who enter here.
         // while a mouse button is pressed, it will fall into this conditional
@@ -321,54 +295,3 @@ fn draw_error(x: i32, y: i32, canvas: &mut Canvas<Window>, counter: u8) {
     // draw_error(x, y, canvas, counter + 1);
 }
 
-// special thanks to https://www.freecodecamp.org/news/simple-chess-ai-step-by-step-1d55a9266977/
-//
-// Recursive function to decide the best move based on the future
-// (This does not gives us the *really* best move, it just sieves out the dumb moves
-fn minimax(depth: u32, game: Chess) -> i32 {
-    if depth == 0 {
-        return -ai::AI::get_values(&game.board().pieces());
-    }
-
-    let new_game_moves = game.legals();
-
-    if game.turn() == shakmaty::Color::Black {
-        let mut best_move = -9999;
-        for i in 0..new_game_moves.len() {
-            let temp_board = game.to_owned().play(&new_game_moves[i]);
-            best_move = max(best_move, minimax(depth - 1, temp_board.unwrap()));
-        }
-        best_move
-    }
-    else {
-        let mut best_move = 9999;
-        for i in 0..new_game_moves.len() {
-            let temp_board = game.to_owned().play(&new_game_moves[i]);
-            best_move = min(best_move, minimax(depth - 1, temp_board.unwrap()));
-        }
-        best_move
-    }
-}
-
-fn minimax_root(depth: u32, game: Chess) -> Move {
-    let new_game_moves = game.legals();
-    let mut best_value = -9999;
-
-    // arbitrary value to avoid undefined behaviour
-    let mut best_move_found: Move = new_game_moves[0].clone();
-
-    for i in 0..new_game_moves.len() {
-        let new_game_move = &new_game_moves[i];
-        
-        let temp_board = game.to_owned().play(&new_game_move);
-
-        let curr_value = minimax(depth - 1, temp_board.unwrap());
-
-        if curr_value >= best_value {
-            best_value = curr_value;
-            best_move_found = new_game_move.clone();
-        }
-    }
-
-    best_move_found
-}
