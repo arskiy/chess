@@ -1,6 +1,5 @@
 extern crate sdl2;
 extern crate shakmaty;
-extern crate rand;
 
 use sdl2::event::Event;
 use sdl2::image::{InitFlag, LoadTexture};
@@ -10,12 +9,12 @@ use sdl2::rect::Rect;
 use sdl2::render::{Canvas, Texture};
 use sdl2::video::Window;
 
-use rand::Rng;
-
 use shakmaty::{Chess, Role, Setup, Square, Rank, File, Move, Position, Board};
 
 use std::path::Path;
 use std::collections::HashSet;
+use std::cmp::max;
+use std::cmp::min;
 
 mod ai;
 use ai::AI;
@@ -31,8 +30,6 @@ fn main() -> Result<(), String> {
 
     let minimax_ai = AI::new();
     
-    let mut rng = rand::thread_rng();
-
     let _image_context = sdl2::image::init(InitFlag::PNG)?;
 
     let window = match video
@@ -58,7 +55,7 @@ fn main() -> Result<(), String> {
     let texture_creator = canvas.texture_creator();
 
     // define standard board
-    let mut board = Chess::default();
+    let mut game = Chess::default();
 
     // load white pieces' sprites. (This is using FEN notation.)
     // credits for sprites: Wikimedia Commons
@@ -82,26 +79,26 @@ fn main() -> Result<(), String> {
     let nothing = texture_creator.load_texture(Path::new("sprites/nothing.png"))?;
 
     // This will parse and draw all pieces currently on the game to the window.
-    let draw_pieces = |canvas: &mut Canvas<Window>, board: &Board| {
-        for i in 0..board.pieces().len() {
-            match board.pieces().nth(i).unwrap().1.color {
+    let draw_pieces = |canvas: &mut Canvas<Window>, game: &Board| {
+        for i in 0..game.pieces().len() {
+            match game.pieces().nth(i).unwrap().1.color {
                 shakmaty::Color::White =>
-                    match board.pieces().nth(i).unwrap().1.role {
-                        Role::Pawn   => draw_piece(canvas, &board, &w_p, i),
-                        Role::Queen  => draw_piece(canvas, &board, &w_q, i),
-                        Role::Bishop => draw_piece(canvas, &board, &w_b, i),
-                        Role::Rook   => draw_piece(canvas, &board, &w_r, i),
-                        Role::Knight => draw_piece(canvas, &board, &w_n, i),
-                        Role::King   => draw_piece(canvas, &board, &w_k, i),
+                    match game.pieces().nth(i).unwrap().1.role {
+                        Role::Pawn   => draw_piece(canvas, &game, &w_p, i),
+                        Role::Queen  => draw_piece(canvas, &game, &w_q, i),
+                        Role::Bishop => draw_piece(canvas, &game, &w_b, i),
+                        Role::Rook   => draw_piece(canvas, &game, &w_r, i),
+                        Role::Knight => draw_piece(canvas, &game, &w_n, i),
+                        Role::King   => draw_piece(canvas, &game, &w_k, i),
                     },
                 shakmaty::Color::Black =>
-                    match board.pieces().nth(i).unwrap().1.role {
-                        Role::Pawn   => draw_piece(canvas, &board, &b_p, i),
-                        Role::Queen  => draw_piece(canvas, &board, &b_q, i),
-                        Role::Bishop => draw_piece(canvas, &board, &b_b, i),
-                        Role::Rook   => draw_piece(canvas, &board, &b_r, i),
-                        Role::Knight => draw_piece(canvas, &board, &b_n, i),
-                        Role::King   => draw_piece(canvas, &board, &b_k, i),
+                    match game.pieces().nth(i).unwrap().1.role {
+                        Role::Pawn   => draw_piece(canvas, &game, &b_p, i),
+                        Role::Queen  => draw_piece(canvas, &game, &b_q, i),
+                        Role::Bishop => draw_piece(canvas, &game, &b_b, i),
+                        Role::Rook   => draw_piece(canvas, &game, &b_r, i),
+                        Role::Knight => draw_piece(canvas, &game, &b_n, i),
+                        Role::King   => draw_piece(canvas, &game, &b_k, i),
                     },
             }
         }
@@ -145,17 +142,20 @@ fn main() -> Result<(), String> {
         canvas.set_draw_color(Color::RGB(0xFF, 0xCE, 0x9E));
         draw_grid(&mut canvas);
 
-        draw_pieces(&mut canvas, board.board());
+        draw_pieces(&mut canvas, game.board());
 
         // AI
 
         // arbitrary large negative number
+        /*
         let mut best_value: i32 = -9999;
-        let mut best_board: Chess = board.clone();
+        let mut best_board: Chess = game.clone();
+        */
 
-        if board.turn() == shakmaty::Color::Black {
-            for movement in 0..board.legals().len() {
-                let new_board = board.to_owned().play(&board.legals()[movement]).unwrap();
+        if game.turn() == shakmaty::Color::Black {
+            /*
+            for movement in 0..game.legals().len() {
+                let new_board = game.to_owned().play(&game.legals()[movement]).unwrap();
                 let val = -ai::AI::get_values(&new_board.board().pieces());
 
                 println!("mov: {}, current: {}, best: {}", movement, val, best_value);
@@ -166,20 +166,22 @@ fn main() -> Result<(), String> {
                     best_board = new_board;
                 }
             }
+            */
+            game = game.to_owned().play(&minimax_root(2, game)).unwrap();
         }
 
-        board = best_board;
+        // game = best_board;
 
         // Abandon all hope, ye who enter here.
         // while a mouse button is pressed, it will fall into this conditional
-        let get_texture = |board: &Board| {
+        let get_texture = |game: &Board| {
             // TODO: use filter here
             // match is more readable than if let.     
-            match board.color_at(Square::from_coords(
+            match game.color_at(Square::from_coords(
                     File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
                     Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical())) {
                 Some(color) => if color == shakmaty::Color::White {
-                    match board.role_at(Square::from_coords(
+                    match game.role_at(Square::from_coords(
                             File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
                             Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical())) {
                         Some(role) => match role {
@@ -202,25 +204,25 @@ fn main() -> Result<(), String> {
 
         // necessary to make the borrow checker happy.
         if curr_mouse_buttons.is_empty() {
-            curr_texture = get_texture(board.board());
+            curr_texture = get_texture(game.board());
         }
 
-        if board.turn() == shakmaty::Color::White {
+        if game.turn() == shakmaty::Color::White {
             let is_mouse_released = &prev_mouse_buttons - &curr_mouse_buttons;
             if !is_mouse_released.is_empty() {
-                curr_role_click = board.board().role_at(Square::from_coords(
+                curr_role_click = game.board().role_at(Square::from_coords(
                     File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
                     Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical()));
                 curr_click_pos = Square::from_coords(File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
                 Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical());
-                match board.to_owned().play(&Move::Normal {
+                match game.to_owned().play(&Move::Normal {
                     role: prev_role_click,
                     from: prev_click_pos,
                     to: curr_click_pos,
                     capture: curr_role_click,
                     promotion: None}) {
 
-                    Ok(board_wrap) => board = board_wrap,
+                    Ok(game_wrap) => game = game_wrap,
 
                     Err(_) => draw_error(((curr_click_pos.file().char() as u32 - 'a' as u32) * SQR_SIZE) as i32,
                     ((curr_click_pos.rank().flip_vertical().char() as u32 - '1' as u32) * SQR_SIZE) as i32,
@@ -231,7 +233,7 @@ fn main() -> Result<(), String> {
         }
 
         if curr_mouse_buttons.is_empty() {
-            prev_role_click = board.board().role_at(Square::from_coords(
+            prev_role_click = game.board().role_at(Square::from_coords(
                     File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
                     Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical())).unwrap_or(Role::Knight);
 
@@ -261,15 +263,15 @@ fn main() -> Result<(), String> {
 
 //-----------------------------------------------------------------------------------
 
-fn draw_piece(canvas: &mut Canvas<Window>, board: &Board, texture: &Texture, i: usize) {
+fn draw_piece(canvas: &mut Canvas<Window>, game: &Board, texture: &Texture, i: usize) {
     canvas
         .copy(
             texture,
             None,
             Rect::new(
-                ((board.pieces().nth(i).unwrap().0.file().char() as u32 - 'a' as u32)
+                ((game.pieces().nth(i).unwrap().0.file().char() as u32 - 'a' as u32)
                  * SQR_SIZE) as i32,
-                 ((board.pieces().nth(i).unwrap().0.rank().flip_vertical().char() as u32 - '1' as u32)
+                 ((game.pieces().nth(i).unwrap().0.rank().flip_vertical().char() as u32 - '1' as u32)
                   * SQR_SIZE) as i32,
                   SQR_SIZE,
                   SQR_SIZE,
@@ -317,4 +319,56 @@ fn draw_error(x: i32, y: i32, canvas: &mut Canvas<Window>, counter: u8) {
 
     // std::thread::sleep(std::time::Duration::from_millis(2));
     // draw_error(x, y, canvas, counter + 1);
+}
+
+// special thanks to https://www.freecodecamp.org/news/simple-chess-ai-step-by-step-1d55a9266977/
+//
+// Recursive function to decide the best move based on the future
+// (This does not gives us the *really* best move, it just sieves out the dumb moves
+fn minimax(depth: u32, game: Chess) -> i32 {
+    if depth == 0 {
+        return -ai::AI::get_values(&game.board().pieces());
+    }
+
+    let new_game_moves = game.legals();
+
+    if game.turn() == shakmaty::Color::Black {
+        let mut best_move = -9999;
+        for i in 0..new_game_moves.len() {
+            let temp_board = game.to_owned().play(&new_game_moves[i]);
+            best_move = max(best_move, minimax(depth - 1, temp_board.unwrap()));
+        }
+        best_move
+    }
+    else {
+        let mut best_move = 9999;
+        for i in 0..new_game_moves.len() {
+            let temp_board = game.to_owned().play(&new_game_moves[i]);
+            best_move = min(best_move, minimax(depth - 1, temp_board.unwrap()));
+        }
+        best_move
+    }
+}
+
+fn minimax_root(depth: u32, game: Chess) -> Move {
+    let new_game_moves = game.legals();
+    let mut best_value = -9999;
+
+    // arbitrary value to avoid undefined behaviour
+    let mut best_move_found: Move = new_game_moves[0].clone();
+
+    for i in 0..new_game_moves.len() {
+        let new_game_move = &new_game_moves[i];
+        
+        let temp_board = game.to_owned().play(&new_game_move);
+
+        let curr_value = minimax(depth - 1, temp_board.unwrap());
+
+        if curr_value >= best_value {
+            best_value = curr_value;
+            best_move_found = new_game_move.clone();
+        }
+    }
+
+    best_move_found
 }
