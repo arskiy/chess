@@ -11,3 +11,7 @@ shakmaty = "0.15.0"
 version = "0.32.0"
 default-features = false
 features = ["image"]
+
+[features]
+default = []
+windows = []

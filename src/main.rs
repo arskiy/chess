@@ -14,11 +14,17 @@ use shakmaty::{Chess, Role, Setup, Square, Rank, File, Move, Position, Board};
 use std::path::Path;
 use std::collections::HashSet;
 
+use std::cmp::max;
+use std::cmp::min;
+
 mod ai;
 
 const SCR_WIDTH: u32 = 600;
 
 const SQR_SIZE: u32 = SCR_WIDTH / 8;
+
+// temporary for debugging
+static mut POSITION_COUNT: u32 = 0;
 
 fn main() -> Result<(), String> {
     // sdl things
@@ -52,26 +58,68 @@ fn main() -> Result<(), String> {
     // define standard board
     let mut game = Chess::default();
 
-    // load white pieces' sprites. (This is using FEN notation.)
-    // credits for sprites: Wikimedia Commons
-    // (https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces)
-    let w_b = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/B.png"))?;
-    let w_k = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/K.png"))?;
-    let w_n = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/N.png"))?;
-    let w_p = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/P.png"))?;
-    let w_q = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/Q.png"))?;
-    let w_r = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/R.png"))?;
+        // load white pieces' sprites. (This is using FEN notation.)
+        // credits for sprites: Wikimedia Commons
+        // (https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces)
+    let mut w_b: Texture;
+    let mut w_k: Texture;
+    let mut w_n: Texture;
+    let mut w_p: Texture;
+    let mut w_q: Texture;
+    let mut w_r: Texture;
 
     // black's
-    let b_b = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/b.png"))?;
-    let b_k = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/k.png"))?;
-    let b_n = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/n.png"))?;
-    let b_p = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/p.png"))?;
-    let b_q = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/q.png"))?;
-    let b_r = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/r.png"))?;
+    let mut b_b: Texture;
+    let mut b_k: Texture;
+    let mut b_n: Texture;
+    let mut b_p: Texture;
+    let mut b_q: Texture;
+    let mut b_r: Texture;
 
-    // completely transparent texture
-    let nothing = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/nothing.png"))?;
+    // completely white texture
+    let mut nothing: Texture;
+
+    if cfg!(not(feature = "windows")) {
+        // load white pieces' sprites. (This is using FEN notation.)
+        // credits for sprites: Wikimedia Commons
+        // (https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces)
+        w_b = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/b_white.png"))?;
+        w_k = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/k_white.png"))?;
+        w_n = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/n_white.png"))?;
+        w_p = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/p_white.png"))?;
+        w_q = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/q_white.png"))?;
+        w_r = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/r_white.png"))?;
+
+        // black's
+        b_b = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/b_black.png"))?;
+        b_k = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/k_black.png"))?;
+        b_n = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/n_black.png"))?;
+        b_p = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/p_black.png"))?;
+        b_q = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/q_black.png"))?;
+        b_r = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/r_black.png"))?;
+        nothing = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/nothing.png"))?;
+    } else {
+        // load white pieces' sprites. (This is using FEN notation.)
+        // credits for sprites: Wikimedia Commons
+        // (https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces)
+        w_b = texture_creator.load_texture(Path::new("sprites/b_white.png"))?;
+        w_k = texture_creator.load_texture(Path::new("sprites/k_white.png"))?;
+        w_n = texture_creator.load_texture(Path::new("sprites/n_white.png"))?;
+        w_p = texture_creator.load_texture(Path::new("sprites/p_white.png"))?;
+        w_q = texture_creator.load_texture(Path::new("sprites/q_white.png"))?;
+        w_r = texture_creator.load_texture(Path::new("sprites/r_white.png"))?;
+
+        // black's
+        b_b = texture_creator.load_texture(Path::new("sprites/b_black.png"))?;
+        b_k = texture_creator.load_texture(Path::new("sprites/k_black.png"))?;
+        b_n = texture_creator.load_texture(Path::new("sprites/n_black.png"))?;
+        b_p = texture_creator.load_texture(Path::new("sprites/p_black.png"))?;
+        b_q = texture_creator.load_texture(Path::new("sprites/q_black.png"))?;
+        b_r = texture_creator.load_texture(Path::new("sprites/r_black.png"))?;
+
+        // completely transparent texture
+        nothing = texture_creator.load_texture(Path::new("sprites/nothing.png"))?;
+    }
 
     // This will parse and draw all pieces currently on the game to the window.
     let draw_pieces = |canvas: &mut Canvas<Window>, game: &Board| {
@@ -142,7 +190,9 @@ fn main() -> Result<(), String> {
         // AI
 
         if game.turn() == shakmaty::Color::Black {
-            game = game.to_owned().play(&ai::minimax_root(4, game)).unwrap();
+            game = game.to_owned().play(&minimax_root(3, game)).unwrap();
+            unsafe { println!("Positions evaluated: {}", POSITION_COUNT); }
+            unsafe { POSITION_COUNT = 0; }
         }
 
         // Abandon all hope, ye who enter here.
@@ -184,8 +234,8 @@ fn main() -> Result<(), String> {
             let is_mouse_released = &prev_mouse_buttons - &curr_mouse_buttons;
             if !is_mouse_released.is_empty() {
                 curr_role_click = game.board().role_at(Square::from_coords(
-                    File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
-                    Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical()));
+                        File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
+                        Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical()));
                 curr_click_pos = Square::from_coords(File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
                 Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical());
                 match game.to_owned().play(&Move::Normal {
@@ -288,9 +338,64 @@ fn draw_error(x: i32, y: i32, canvas: &mut Canvas<Window>, counter: u8) {
             y,
             SQR_SIZE,
             SQR_SIZE));
-    // println!("X: {} | Y: {} | {}", x, y, counter);
-
-    // std::thread::sleep(std::time::Duration::from_millis(2));
-    // draw_error(x, y, canvas, counter + 1);
 }
 
+fn minimax(depth: u32, game: Chess, mut alpha: i32, mut beta: i32) -> i32 {
+    // this is actually safe since we aren't using concurrency
+    unsafe { POSITION_COUNT += 1; }
+    if depth == 0 {
+        return -ai::get_values(&game.board().pieces());
+    }
+
+    let new_game_moves = game.legals();
+
+    if game.turn() == shakmaty::Color::Black {
+        let mut best_move = -9999;
+        for i in 0..new_game_moves.len() {
+            let temp_board = game.to_owned().play(&new_game_moves[i]);
+            best_move = max(best_move, minimax(depth - 1, temp_board.unwrap(), alpha, beta));
+
+            alpha = max(alpha, best_move);
+            if alpha >= beta {
+                return best_move;
+            }
+        }
+        best_move
+    }
+    else {
+        let mut best_move = 9999;
+        for i in 0..new_game_moves.len() {
+            let temp_board = game.to_owned().play(&new_game_moves[i]);
+            best_move = min(best_move, minimax(depth - 1, temp_board.unwrap(), alpha, beta));
+
+            beta = min(beta, best_move);
+            if alpha >= beta {
+                return best_move;
+            }
+        }
+        best_move
+    }
+}
+
+fn minimax_root(depth: u32, game: Chess) -> Move {
+    let new_game_moves = game.legals();
+    let mut best_value = -9999;
+
+    // arbitrary value to avoid undefined behaviour
+    let mut best_move_found: Move = new_game_moves[0].clone();
+
+    for i in 0..new_game_moves.len() {
+        let new_game_move = &new_game_moves[i];
+
+        let temp_board = game.to_owned().play(&new_game_move);
+
+        let curr_value = minimax(depth - 1, temp_board.unwrap(), -10000, 10000);
+
+        if curr_value >= best_value {
+            best_value = curr_value;
+            best_move_found = new_game_move.clone();
+        }
+    }
+
+    best_move_found
+}

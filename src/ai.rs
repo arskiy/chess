@@ -5,17 +5,6 @@ use shakmaty::{Pieces, Role, Color, Chess, Move, Position, Setup};
 use std::cmp::max;
 use std::cmp::min;
 
-pub struct AI {
-
-}
-
-impl AI {
-    pub fn new() -> AI {
-        AI {}
-    }
-
-}
-
 pub fn get_values(pieces: &Pieces) -> i32 {
     let mut total = 0;
 
