@@ -15,7 +15,6 @@ use std::path::Path;
 use std::collections::HashSet;
 
 mod ai;
-use ai::AI;
 
 const SCR_WIDTH: u32 = 600;
 
@@ -143,7 +142,7 @@ fn main() -> Result<(), String> {
         // AI
 
         if game.turn() == shakmaty::Color::Black {
-            game = game.to_owned().play(&ai::minimax_root(2, game)).unwrap();
+            game = game.to_owned().play(&ai::minimax_root(3, game)).unwrap();
         }
 
         // Abandon all hope, ye who enter here.

@@ -48,7 +48,7 @@ pub fn get_values(pieces: &Pieces) -> i32 {
 //
 // Recursive function to decide the best move based on the future
 // (This does not gives us the *really* best move, it just sieves out the dumb moves
-pub fn minimax(depth: u32, game: Chess) -> i32 {
+pub fn minimax(depth: u32, game: Chess, mut alpha: i32, mut beta: i32) -> i32 {
     if depth == 0 {
         return -get_values(&game.board().pieces());
     }
@@ -59,7 +59,12 @@ pub fn minimax(depth: u32, game: Chess) -> i32 {
         let mut best_move = -9999;
         for i in 0..new_game_moves.len() {
             let temp_board = game.to_owned().play(&new_game_moves[i]);
-            best_move = max(best_move, minimax(depth - 1, temp_board.unwrap()));
+            best_move = max(best_move, minimax(depth - 1, temp_board.unwrap(), alpha, beta));
+
+            alpha = max(alpha, best_move);
+            if alpha >= beta {
+                return best_move;
+            }
         }
         best_move
     }
@@ -67,7 +72,12 @@ pub fn minimax(depth: u32, game: Chess) -> i32 {
         let mut best_move = 9999;
         for i in 0..new_game_moves.len() {
             let temp_board = game.to_owned().play(&new_game_moves[i]);
-            best_move = min(best_move, minimax(depth - 1, temp_board.unwrap()));
+            best_move = min(best_move, minimax(depth - 1, temp_board.unwrap(), alpha, beta));
+
+            beta = min(beta, best_move);
+            if alpha >= beta {
+                return best_move;
+            }
         }
         best_move
     }
@@ -85,7 +95,7 @@ pub fn minimax_root(depth: u32, game: Chess) -> Move {
 
         let temp_board = game.to_owned().play(&new_game_move);
 
-        let curr_value = minimax(depth - 1, temp_board.unwrap());
+        let curr_value = minimax(depth - 1, temp_board.unwrap(), -10000, 10000);
 
         if curr_value >= best_value {
             best_value = curr_value;
