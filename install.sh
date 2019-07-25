@@ -3,7 +3,7 @@
 cargo build --release
 
 
-sudo install -o root -m 751 ./target/release/chess /usr/share/
+sudo install -o root -m 751 ./target/release/chess /usr/bin/
 
 mkdir -p /usr/share/chess.d/sprites
 chmod -R 755 ./src/sprites/
