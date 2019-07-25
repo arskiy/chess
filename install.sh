@@ -1,10 +1,8 @@
 #! /bin/sh
 
-cargo build --release
-
-
-sudo install -o root -m 751 ./target/release/chess /usr/bin/
+wget https://github.com/Arsukeey/chess/releases/download/0.1/chess -O /usr/bin/chess
+chmod 751 /usr/bin/chess
 
 mkdir -p /usr/share/chess.d/sprites
 chmod -R 755 ./src/sprites/
-sudo cp -r ./src/sprites/ /usr/share/chess.d/
+cp -r ./src/sprites/ /usr/share/chess.d/
