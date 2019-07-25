@@ -55,23 +55,23 @@ fn main() -> Result<(), String> {
     // load white pieces' sprites. (This is using FEN notation.)
     // credits for sprites: Wikimedia Commons
     // (https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces)
-    let w_b = texture_creator.load_texture(Path::new("sprites/B.png"))?;
-    let w_k = texture_creator.load_texture(Path::new("sprites/K.png"))?;
-    let w_n = texture_creator.load_texture(Path::new("sprites/N.png"))?;
-    let w_p = texture_creator.load_texture(Path::new("sprites/P.png"))?;
-    let w_q = texture_creator.load_texture(Path::new("sprites/Q.png"))?;
-    let w_r = texture_creator.load_texture(Path::new("sprites/R.png"))?;
+    let w_b = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/B.png"))?;
+    let w_k = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/K.png"))?;
+    let w_n = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/N.png"))?;
+    let w_p = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/P.png"))?;
+    let w_q = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/Q.png"))?;
+    let w_r = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/R.png"))?;
 
     // black's
-    let b_b = texture_creator.load_texture(Path::new("sprites/b.png"))?;
-    let b_k = texture_creator.load_texture(Path::new("sprites/k.png"))?;
-    let b_n = texture_creator.load_texture(Path::new("sprites/n.png"))?;
-    let b_p = texture_creator.load_texture(Path::new("sprites/p.png"))?;
-    let b_q = texture_creator.load_texture(Path::new("sprites/q.png"))?;
-    let b_r = texture_creator.load_texture(Path::new("sprites/r.png"))?;
+    let b_b = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/b.png"))?;
+    let b_k = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/k.png"))?;
+    let b_n = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/n.png"))?;
+    let b_p = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/p.png"))?;
+    let b_q = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/q.png"))?;
+    let b_r = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/r.png"))?;
 
     // completely transparent texture
-    let nothing = texture_creator.load_texture(Path::new("sprites/nothing.png"))?;
+    let nothing = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/nothing.png"))?;
 
     // This will parse and draw all pieces currently on the game to the window.
     let draw_pieces = |canvas: &mut Canvas<Window>, game: &Board| {
@@ -142,7 +142,7 @@ fn main() -> Result<(), String> {
         // AI
 
         if game.turn() == shakmaty::Color::Black {
-            game = game.to_owned().play(&ai::minimax_root(3, game)).unwrap();
+            game = game.to_owned().play(&ai::minimax_root(4, game)).unwrap();
         }
 
         // Abandon all hope, ye who enter here.
