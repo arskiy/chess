@@ -172,7 +172,7 @@ fn main() -> Result<(), String> {
                 _ => {}
             }
         }
-        
+
         if let Some(outcome) = game.outcome() {
             match outcome.winner() {
                 Some(color) =>
@@ -198,6 +198,8 @@ fn main() -> Result<(), String> {
 
         canvas.set_draw_color(Color::RGB(0xFF, 0xCE, 0x9E));
         draw_grid(&mut canvas);
+
+        draw_check(&game, &mut canvas);
 
         draw_pieces(&mut canvas, game.board());
 
@@ -341,13 +343,49 @@ fn draw_grid(canvas: &mut Canvas<Window>) {
 // TODO: make this actually work as expected
 
 fn draw_error(x: i32, y: i32, canvas: &mut Canvas<Window>) {
+    canvas.set_draw_color(Color::RGB(255, 5, 5));
+    let _ = canvas.fill_rect(Rect::new(
+            x,
+            y,
+            SQR_SIZE,
+            SQR_SIZE));
+    thread::sleep(time::Duration::from_millis(100));
+}
+
+fn draw_check(game: &Chess, canvas: &mut Canvas<Window>) {
+    let pieces = game.board().pieces();
+    let mut white_king_pos: Square = Square::new(0);
+    let mut black_king_pos: Square = Square::new(0);
+
+    for i in 0..pieces.len() {
+        pieces.to_owned().nth(i).filter(|piece| piece.1.role == Role::King).map(|piece| if piece.1.color == shakmaty::Color::White {
+            white_king_pos = piece.to_owned().0;
+        }
+        else {
+            black_king_pos = piece.to_owned().0;
+        });
+    }
+
+    if game.is_check() {
+        let x: i32;
+        let y: i32;
+
+        if game.turn() == shakmaty::Color::White {
+            x = ((white_king_pos.file().char() as u32 - 'a' as u32) * SQR_SIZE) as i32;
+            y = ((white_king_pos.rank().flip_vertical().char() as u32 - '1' as u32) * SQR_SIZE) as i32;
+        }
+        else {
+            x = ((black_king_pos.file().char() as u32 - 'a' as u32) * SQR_SIZE) as i32;
+            y = ((black_king_pos.rank().flip_vertical().char() as u32 - '1' as u32) * SQR_SIZE) as i32;
+        }
+
         canvas.set_draw_color(Color::RGB(255, 5, 5));
         let _ = canvas.fill_rect(Rect::new(
                 x,
                 y,
                 SQR_SIZE,
                 SQR_SIZE));
-        thread::sleep(time::Duration::from_millis(100));
+    }
 }
 
 fn minimax(depth: u32, game: Chess, mut alpha: i32, mut beta: i32) -> i32 {
