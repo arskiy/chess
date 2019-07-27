@@ -172,6 +172,22 @@ fn main() -> Result<(), String> {
                 _ => {}
             }
         }
+        
+        if let Some(outcome) = game.outcome() {
+            match outcome.winner() {
+                Some(color) =>
+                    if color == shakmaty::Color::Black {
+                        println!("You lost.");
+                        break 'render_loop;
+                    }
+                    else {
+                        println!("You won! Congratulations!!!");
+                        break 'render_loop;
+                    }
+
+                None => { println!("Draw!"); break 'render_loop; }
+            }
+        }
 
         let mouse_state = events.mouse_state();
         let curr_mouse_buttons: HashSet<_> = mouse_state.pressed_mouse_buttons().collect();
