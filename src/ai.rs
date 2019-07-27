@@ -116,7 +116,7 @@ const KING_EVAL_BLACK: [[i32; 8]; 8] = [
     [ -3, -4, -4, -5, -5, -4, -4, -3],
 ];
 
-pub fn get_values(pieces: &mut Pieces) -> i32 {
+pub fn get_values(pieces: &Pieces) -> i32 {
     let mut total = 0;
 
     let get_value_from_eval = |pieces: &Pieces, eval: &[[i32; 8]; 8], index: usize| {
@@ -171,7 +171,7 @@ pub fn get_values(pieces: &mut Pieces) -> i32 {
 // (This does not gives us the *really* best move, it just sieves out the dumb moves
 pub fn minimax(depth: u32, game: Chess, mut alpha: i32, mut beta: i32) -> i32 {
     if depth == 0 {
-        return -get_values(&mut game.board().pieces());
+        return -get_values(&game.board().pieces());
     }
 
     let new_game_moves = game.legals();
@@ -225,4 +225,15 @@ pub fn minimax_root(depth: u32, game: Chess) -> Move {
     }
 
     best_move_found
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_values() {
+        let game = Chess::default();
+        assert_eq!(get_values(&game.board().pieces()), 0);
+    }
 }

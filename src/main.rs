@@ -8,6 +8,7 @@ use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::{Canvas, Texture};
 use sdl2::video::Window;
+use std::{thread, time};
 
 use shakmaty::{Chess, Role, Setup, Square, Rank, File, Move, Position, Board};
 
@@ -58,9 +59,9 @@ fn main() -> Result<(), String> {
     // define standard board
     let mut game = Chess::default();
 
-        // load white pieces' sprites. (This is using FEN notation.)
-        // credits for sprites: Wikimedia Commons
-        // (https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces)
+    // load white pieces' sprites. (This is using FEN notation.)
+    // credits for sprites: Wikimedia Commons
+    // (https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces)
     let mut w_b: Texture;
     let mut w_k: Texture;
     let mut w_n: Texture;
@@ -246,8 +247,7 @@ fn main() -> Result<(), String> {
 
                     Err(_) => draw_error(((curr_click_pos.file().char() as u32 - 'a' as u32) * SQR_SIZE) as i32,
                     ((curr_click_pos.rank().flip_vertical().char() as u32 - '1' as u32) * SQR_SIZE) as i32,
-                    &mut canvas,
-                    0),
+                    &mut canvas),
                 }
             }
         }
@@ -324,24 +324,21 @@ fn draw_grid(canvas: &mut Canvas<Window>) {
 //----------------------------------------------------------------
 // TODO: make this actually work as expected
 
-fn draw_error(x: i32, y: i32, canvas: &mut Canvas<Window>, counter: u8) {
-    // if counter == 255 {
-    // return
-    // }
-
-    canvas.set_draw_color(Color::RGB(255, 0, 0));
-    let _ = canvas.fill_rect(Rect::new(
-            x,
-            y,
-            SQR_SIZE,
-            SQR_SIZE));
+fn draw_error(x: i32, y: i32, canvas: &mut Canvas<Window>) {
+        canvas.set_draw_color(Color::RGB(255, 5, 5));
+        let _ = canvas.fill_rect(Rect::new(
+                x,
+                y,
+                SQR_SIZE,
+                SQR_SIZE));
+        thread::sleep(time::Duration::from_millis(100));
 }
 
 fn minimax(depth: u32, game: Chess, mut alpha: i32, mut beta: i32) -> i32 {
     // this is actually safe since we aren't using concurrency
     unsafe { POSITION_COUNT += 1; }
     if depth == 0 {
-        return -ai::get_values(&mut game.board().pieces());
+        return -ai::get_values(&game.board().pieces());
     }
 
     let new_game_moves = game.legals();
