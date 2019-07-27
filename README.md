@@ -5,7 +5,7 @@
 From my research, this is the first ever Rust implementation of a Chess AI. This was made in 10 days as a Rust exercise.
 
 ## Installation
-#### Requirements:
+#### Dependencies:
 - SDL2
 - SDL2_image
 
@@ -31,6 +31,6 @@ download the "portable" or "windows" (according to your OS) [release](https://gi
 - *To play*, simply drag and drop the pieces. If the movement isn't valid, the game won't let you play that move.
 - *To castle*, Drag the king to the rook.
 
-### Screenshots:
-[![Image](https://imgur.com/BThE07k.png)]
-[![Image](https://imgur.com/kOuPjfU.png)]
+#### Screenshots:
+![Image](https://imgur.com/BThE07k.png)
+![Image](https://imgur.com/kOuPjfU.png)
