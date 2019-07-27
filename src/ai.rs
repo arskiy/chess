@@ -5,6 +5,9 @@ use shakmaty::{Pieces, Role, Color, Chess, Move, Position, Setup};
 use std::cmp::max;
 use std::cmp::min;
 
+// temporary for debugging
+static mut POSITION_COUNT: u32 = 0;
+
 // simplified evaluation arrays
 const PAWN_EVAL_WHITE: [[i32; 8]; 8] = [
     [0,  0,  0,  0,  0,  0,  0,  0],
@@ -170,6 +173,7 @@ pub fn get_values(pieces: &Pieces) -> i32 {
 // Recursive function to decide the best move based on the future
 // (This does not gives us the *really* best move, it just sieves out the dumb moves
 pub fn minimax(depth: u32, game: Chess, mut alpha: i32, mut beta: i32) -> i32 {
+    unsafe { POSITION_COUNT += 1; }
     if depth == 0 {
         return -get_values(&game.board().pieces());
     }
@@ -205,6 +209,7 @@ pub fn minimax(depth: u32, game: Chess, mut alpha: i32, mut beta: i32) -> i32 {
 }
 
 pub fn minimax_root(depth: u32, game: Chess) -> Move {
+    unsafe { POSITION_COUNT += 1; }
     let new_game_moves = game.legals();
     let mut best_value = -9999;
 
@@ -224,6 +229,7 @@ pub fn minimax_root(depth: u32, game: Chess) -> Move {
         }
     }
 
+    unsafe { println!("positions evaluated: {}", POSITION_COUNT); POSITION_COUNT = 0; }
     best_move_found
 }
 

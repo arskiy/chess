@@ -15,17 +15,12 @@ use shakmaty::{Chess, Role, Setup, Square, Rank, File, Move, Position, Board};
 use std::path::Path;
 use std::collections::HashSet;
 
-use std::cmp::max;
-use std::cmp::min;
-
 use crate::ai;
 
 const SCR_WIDTH: u32 = 600;
 
 const SQR_SIZE: u32 = SCR_WIDTH / 8;
 
-// temporary for debugging
-static mut POSITION_COUNT: u32 = 0;
 
 pub fn init() -> Result<(), String> {
     // sdl things
@@ -206,9 +201,7 @@ pub fn init() -> Result<(), String> {
         // AI
 
         if game.turn() == shakmaty::Color::Black {
-            game = game.to_owned().play(&minimax_root(3, game)).unwrap();
-            unsafe { println!("Positions evaluated: {}", POSITION_COUNT); }
-            unsafe { POSITION_COUNT = 0; }
+            game = game.to_owned().play(&ai::minimax_root(3, game)).unwrap();
         }
 
         // Abandon all hope, ye who enter here.
@@ -413,64 +406,4 @@ fn draw_check(game: &Chess, canvas: &mut Canvas<Window>) {
                 SQR_SIZE,
                 SQR_SIZE));
     }
-}
-
-fn minimax(depth: u32, game: Chess, mut alpha: i32, mut beta: i32) -> i32 {
-    // this is actually safe since we aren't using concurrency
-    unsafe { POSITION_COUNT += 1; }
-    if depth == 0 {
-        return -ai::get_values(&game.board().pieces());
-    }
-
-    let new_game_moves = game.legals();
-
-    if game.turn() == shakmaty::Color::Black {
-        let mut best_move = -9999;
-        for i in 0..new_game_moves.len() {
-            let temp_board = game.to_owned().play(&new_game_moves[i]);
-            best_move = max(best_move, minimax(depth - 1, temp_board.unwrap(), alpha, beta));
-
-            alpha = max(alpha, best_move);
-            if alpha >= beta {
-                return best_move;
-            }
-        }
-        best_move
-    }
-    else {
-        let mut best_move = 9999;
-        for i in 0..new_game_moves.len() {
-            let temp_board = game.to_owned().play(&new_game_moves[i]);
-            best_move = min(best_move, minimax(depth - 1, temp_board.unwrap(), alpha, beta));
-
-            beta = min(beta, best_move);
-            if alpha >= beta {
-                return best_move;
-            }
-        }
-        best_move
-    }
-}
-
-fn minimax_root(depth: u32, game: Chess) -> Move {
-    let new_game_moves = game.legals();
-    let mut best_value = -9999;
-
-    // arbitrary value to avoid undefined behaviour
-    let mut best_move_found: Move = new_game_moves[0].clone();
-
-    for i in 0..new_game_moves.len() {
-        let new_game_move = &new_game_moves[i];
-
-        let temp_board = game.to_owned().play(&new_game_move);
-
-        let curr_value = minimax(depth - 1, temp_board.unwrap(), -10000, 10000);
-
-        if curr_value >= best_value {
-            best_value = curr_value;
-            best_move_found = new_game_move.clone();
-        }
-    }
-
-    best_move_found
 }
