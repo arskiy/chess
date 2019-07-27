@@ -10,9 +10,13 @@ From my research, this is the first ever Rust implementation of a Chess AI. This
 - SDL2_image
 
 If you are on Linux or BSD, simply
-`git clone https://github.com/Arsukeey/chess.git`
-`cd chess`
-`sudo ./install.sh`
+```
+git clone https://github.com/Arsukeey/chess.git
+
+cd chess
+
+sudo ./install.sh
+```
 and then simply run `chess` on your terminal.
 
 If you are on Windows or Mac, 
