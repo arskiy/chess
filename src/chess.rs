@@ -274,6 +274,13 @@ pub fn init() -> Result<(), String> {
                     
                     game = game_wrap;
                 }
+
+                if let Ok(game_wrap) = game.to_owned().play(&Move::EnPassant {
+                    from: prev_click_pos,
+                    to: curr_click_pos}) {
+
+                    game = game_wrap;
+                }
             }
         }
 
