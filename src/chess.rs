@@ -254,6 +254,19 @@ pub fn init() -> Result<(), String> {
                         Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical()));
                 curr_click_pos = Square::from_coords(File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
                 Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical());
+
+                if prev_role_click == Role::Pawn && curr_click_pos.rank() == Rank::new(7) {
+                    if let Ok(game_wrap) = game.to_owned().play(&Move::Normal {
+                        role: Role::Pawn,
+                        from: prev_click_pos,
+                        to: curr_click_pos,
+                        capture: curr_role_click,
+                        promotion: Some(Role::Queen)}) {
+                        
+                        game = game_wrap;
+                    }
+                }
+
                 match game.to_owned().play(&Move::Normal {
                     role: prev_role_click,
                     from: prev_click_pos,
