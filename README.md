@@ -1,6 +1,6 @@
 # Chess - chess implemented in Rust.
 
-[![Chess](https://img.shields.io/badge/Chess-v0.3.0-green.svg)]()
+[![Chess](https://img.shields.io/badge/Chess-v0.3.0-green.svg)]
 
 From my research, this is the first ever Rust implementation of a Chess AI. This was made in 10 days as a Rust exercise.
 
