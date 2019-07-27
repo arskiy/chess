@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 extern crate sdl2;
 extern crate shakmaty;
 
@@ -80,7 +82,7 @@ fn main() -> Result<(), String> {
     let mut nothing: Texture;
 
     if cfg!(not(feature = "windows")) {
-        // load white pieces' sprites. (This is using FEN notation.)
+        // load white pieces' sprites.        
         // credits for sprites: Wikimedia Commons
         // (https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces)
         w_b = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/b_white.png"))?;
@@ -97,11 +99,10 @@ fn main() -> Result<(), String> {
         b_p = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/p_black.png"))?;
         b_q = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/q_black.png"))?;
         b_r = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/r_black.png"))?;
+
+        // completely transparent texture
         nothing = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/nothing.png"))?;
     } else {
-        // load white pieces' sprites. (This is using FEN notation.)
-        // credits for sprites: Wikimedia Commons
-        // (https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces)
         w_b = texture_creator.load_texture(Path::new("sprites/b_white.png"))?;
         w_k = texture_creator.load_texture(Path::new("sprites/k_white.png"))?;
         w_n = texture_creator.load_texture(Path::new("sprites/n_white.png"))?;
@@ -109,7 +110,6 @@ fn main() -> Result<(), String> {
         w_q = texture_creator.load_texture(Path::new("sprites/q_white.png"))?;
         w_r = texture_creator.load_texture(Path::new("sprites/r_white.png"))?;
 
-        // black's
         b_b = texture_creator.load_texture(Path::new("sprites/b_black.png"))?;
         b_k = texture_creator.load_texture(Path::new("sprites/k_black.png"))?;
         b_n = texture_creator.load_texture(Path::new("sprites/n_black.png"))?;
@@ -117,7 +117,6 @@ fn main() -> Result<(), String> {
         b_q = texture_creator.load_texture(Path::new("sprites/q_black.png"))?;
         b_r = texture_creator.load_texture(Path::new("sprites/r_black.png"))?;
 
-        // completely transparent texture
         nothing = texture_creator.load_texture(Path::new("sprites/nothing.png"))?;
     }
 
@@ -157,7 +156,7 @@ fn main() -> Result<(), String> {
     let mut prev_click_pos: Square = Square::A1;
 
     let mut prev_role_click: Role = Role::Pawn;
-    let mut curr_role_click: Option<Role> = None;
+    let mut curr_role_click: Option<Role>;
 
     let mut prev_mouse_buttons = HashSet::new();
 
@@ -344,7 +343,7 @@ fn minimax(depth: u32, game: Chess, mut alpha: i32, mut beta: i32) -> i32 {
     // this is actually safe since we aren't using concurrency
     unsafe { POSITION_COUNT += 1; }
     if depth == 0 {
-        return -ai::get_values(&game.board().pieces());
+        return -ai::get_values(&mut game.board().pieces());
     }
 
     let new_game_moves = game.legals();
