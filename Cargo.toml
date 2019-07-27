@@ -1,0 +1,17 @@
+[package]
+name = "chess"
+version = "0.3.0"
+authors = ["Lucas Micheloni <lucas.michelonidesouza@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+shakmaty = "0.15.0"
+
+[dependencies.sdl2]
+version = "0.32.0"
+default-features = false
+features = ["image"]
+
+[features]
+default = []
+portable = []

@@ -255,7 +255,7 @@ pub fn init() -> Result<(), String> {
                         to: curr_click_pos,
                         capture: curr_role_click,
                         promotion: Some(Role::Queen)}) {
-                        
+
                         game = game_wrap;
                     }
                 }
@@ -274,18 +274,22 @@ pub fn init() -> Result<(), String> {
                     &mut canvas),
                 }
 
-                if let Ok(game_wrap) = game.to_owned().play(&Move::Castle {
-                    king: prev_click_pos,
-                    rook: curr_click_pos}) {
-                    
-                    game = game_wrap;
+                if prev_role_click == Role::King {
+                    if let Ok(game_wrap) = game.to_owned().play(&Move::Castle {
+                        king: prev_click_pos,
+                        rook: curr_click_pos}) {
+
+                        game = game_wrap;
+                    }
                 }
 
-                if let Ok(game_wrap) = game.to_owned().play(&Move::EnPassant {
-                    from: prev_click_pos,
-                    to: curr_click_pos}) {
+                if prev_role_click == Role::Pawn {
+                    if let Ok(game_wrap) = game.to_owned().play(&Move::EnPassant {
+                        from: prev_click_pos,
+                        to: curr_click_pos}) {
 
-                    game = game_wrap;
+                        game = game_wrap;
+                    }
                 }
             }
         }
