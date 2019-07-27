@@ -35,6 +35,6 @@ download the "portable" or "windows" (according to your OS) [release](https://gi
 - *To play*, simply drag and drop the pieces. If the movement isn't valid, the game won't let you play that move.
 - *To castle*, Drag the king to the rook.
 
-#### Screenshots:
-![Image](https://imgur.com/BThE07k.png)
-![Image](https://imgur.com/kOuPjfU.png)
+#### Live Example:
+![Image](https://imgur.com/LBzSHm7.gif)
+
