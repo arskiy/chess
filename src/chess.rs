@@ -10,17 +10,18 @@ use sdl2::render::{Canvas, Texture};
 use sdl2::video::Window;
 use std::{thread, time};
 
-use shakmaty::{Chess, Role, Setup, Square, Rank, File, Move, Position, Board};
+use shakmaty::{Board, Chess, File, Move, Position, Rank, Role, Setup, Square};
 
-use std::path::Path;
 use std::collections::HashSet;
+use std::path::Path;
 
 use crate::ai;
+
+use crate::emscripten_file;
 
 const SCR_WIDTH: u32 = 600;
 
 const SQR_SIZE: u32 = SCR_WIDTH / 8;
-
 
 pub fn init() -> Result<(), String> {
     // sdl things
@@ -33,10 +34,11 @@ pub fn init() -> Result<(), String> {
         .window("Chess", SCR_WIDTH, SCR_WIDTH)
         .position_centered()
         .opengl()
-        .build() {
-            Ok(window) => window,
-            Err(err) => panic!("failed to create window: {}", err),
-        };
+        .build()
+    {
+        Ok(window) => window,
+        Err(err) => panic!("failed to create window: {}", err),
+    };
 
     let mut canvas = window
         .into_canvas()
@@ -76,7 +78,7 @@ pub fn init() -> Result<(), String> {
     let mut nothing: Texture;
 
     if cfg!(not(feature = "windows")) {
-        // load white pieces' sprites.        
+        // load white pieces' sprites.
         // credits for sprites: Wikimedia Commons
         // (https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces)
         w_b = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/b_white.png"))?;
@@ -95,7 +97,8 @@ pub fn init() -> Result<(), String> {
         b_r = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/r_black.png"))?;
 
         // completely transparent texture
-        nothing = texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/nothing.png"))?;
+        nothing =
+            texture_creator.load_texture(Path::new("/usr/share/chess.d/sprites/nothing.png"))?;
     } else {
         w_b = texture_creator.load_texture(Path::new("sprites/b_white.png"))?;
         w_k = texture_creator.load_texture(Path::new("sprites/k_white.png"))?;
@@ -118,24 +121,22 @@ pub fn init() -> Result<(), String> {
     let draw_pieces = |canvas: &mut Canvas<Window>, game: &Board| {
         for i in 0..game.pieces().len() {
             match game.pieces().nth(i).unwrap().1.color {
-                shakmaty::Color::White =>
-                    match game.pieces().nth(i).unwrap().1.role {
-                        Role::Pawn   => draw_piece(canvas, &game, &w_p, i),
-                        Role::Queen  => draw_piece(canvas, &game, &w_q, i),
-                        Role::Bishop => draw_piece(canvas, &game, &w_b, i),
-                        Role::Rook   => draw_piece(canvas, &game, &w_r, i),
-                        Role::Knight => draw_piece(canvas, &game, &w_n, i),
-                        Role::King   => draw_piece(canvas, &game, &w_k, i),
-                    },
-                shakmaty::Color::Black =>
-                    match game.pieces().nth(i).unwrap().1.role {
-                        Role::Pawn   => draw_piece(canvas, &game, &b_p, i),
-                        Role::Queen  => draw_piece(canvas, &game, &b_q, i),
-                        Role::Bishop => draw_piece(canvas, &game, &b_b, i),
-                        Role::Rook   => draw_piece(canvas, &game, &b_r, i),
-                        Role::Knight => draw_piece(canvas, &game, &b_n, i),
-                        Role::King   => draw_piece(canvas, &game, &b_k, i),
-                    },
+                shakmaty::Color::White => match game.pieces().nth(i).unwrap().1.role {
+                    Role::Pawn => draw_piece(canvas, &game, &w_p, i),
+                    Role::Queen => draw_piece(canvas, &game, &w_q, i),
+                    Role::Bishop => draw_piece(canvas, &game, &w_b, i),
+                    Role::Rook => draw_piece(canvas, &game, &w_r, i),
+                    Role::Knight => draw_piece(canvas, &game, &w_n, i),
+                    Role::King => draw_piece(canvas, &game, &w_k, i),
+                },
+                shakmaty::Color::Black => match game.pieces().nth(i).unwrap().1.role {
+                    Role::Pawn => draw_piece(canvas, &game, &b_p, i),
+                    Role::Queen => draw_piece(canvas, &game, &b_q, i),
+                    Role::Bishop => draw_piece(canvas, &game, &b_b, i),
+                    Role::Rook => draw_piece(canvas, &game, &b_r, i),
+                    Role::Knight => draw_piece(canvas, &game, &b_n, i),
+                    Role::King => draw_piece(canvas, &game, &b_k, i),
+                },
             }
         }
     };
@@ -144,17 +145,18 @@ pub fn init() -> Result<(), String> {
     // so we just set an arbritary texture to this by now.
     let mut curr_texture: &Texture = &nothing;
 
-    let mut curr_click_pos: Square;
 
     // arbitrary to avoid undefined behaviour
     let mut prev_click_pos: Square = Square::A1;
 
     let mut prev_role_click: Role = Role::Pawn;
-    let mut curr_role_click: Option<Role>;
+    let mut curr_role_click: Option<Role> = None;
 
     let mut prev_mouse_buttons = HashSet::new();
 
-    'render_loop: loop {
+    let mut main_loop = || {
+        let curr_click_pos: Square;
+
         for event in events.poll_iter() {
             // if esc is pressed, exit main loop
             // (consequently ending the program)
@@ -163,30 +165,32 @@ pub fn init() -> Result<(), String> {
                 | Event::KeyDown {
                     keycode: Some(Keycode::Escape),
                     ..
-                } => break 'render_loop,
+                } => return,
                 _ => {}
             }
         }
 
         if let Some(outcome) = game.outcome() {
             match outcome.winner() {
-                Some(color) =>
+                Some(color) => {
                     if color == shakmaty::Color::Black {
                         println!("You lost.");
-                        break 'render_loop;
-                    }
-                    else {
+                        return;
+                    } else {
                         println!("You won! Congratulations!!!");
-                        break 'render_loop;
+                        return
                     }
+                }
 
-                None => { println!("Draw!"); break 'render_loop; }
+                None => {
+                    println!("Draw!");
+                    return
+                }
             }
         }
 
         let mouse_state = events.mouse_state();
         let curr_mouse_buttons: HashSet<_> = mouse_state.pressed_mouse_buttons().collect();
-
 
         canvas.set_draw_color(Color::RGB(0xD1, 0x8B, 0x47));
         canvas.clear();
@@ -201,34 +205,39 @@ pub fn init() -> Result<(), String> {
         // AI
 
         if game.turn() == shakmaty::Color::Black {
-            game = game.to_owned().play(&ai::minimax_root(3, game)).unwrap();
+            game = game.to_owned().play(&ai::minimax_root(3, &mut game)).unwrap();
         }
 
         // Abandon all hope, ye who enter here.
         // while a mouse button is pressed, it will fall into this conditional
         let get_texture = |game: &Board| {
             // TODO: use filter here
-            // match is more readable than if let.     
+            // match is more readable than if let.
             match game.color_at(Square::from_coords(
-                    File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
-                    Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical())) {
-                Some(color) => if color == shakmaty::Color::White {
-                    match game.role_at(Square::from_coords(
+                File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
+                Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical(),
+            )) {
+                Some(color) => {
+                    if color == shakmaty::Color::White {
+                        match game.role_at(Square::from_coords(
                             File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
-                            Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical())) {
-                        Some(role) => match role {
-                            Role::King   => &w_k,
-                            Role::Knight => &w_n,
-                            Role::Rook   => &w_r,
-                            Role::Bishop => &w_b,
-                            Role::Queen  => &w_q,
-                            Role::Pawn   => &w_p,
-                        }
+                            Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical(),
+                        )) {
+                            Some(role) => match role {
+                                Role::King => &w_k,
+                                Role::Knight => &w_n,
+                                Role::Rook => &w_r,
+                                Role::Bishop => &w_b,
+                                Role::Queen => &w_q,
+                                Role::Pawn => &w_p,
+                            },
 
-                        None => &nothing,
+                            None => &nothing,
+                        }
+                    } else {
+                        &nothing
                     }
                 }
-                else { &nothing }
 
                 None => &nothing,
             }
@@ -243,10 +252,13 @@ pub fn init() -> Result<(), String> {
             let is_mouse_released = &prev_mouse_buttons - &curr_mouse_buttons;
             if !is_mouse_released.is_empty() {
                 curr_role_click = game.board().role_at(Square::from_coords(
-                        File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
-                        Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical()));
-                curr_click_pos = Square::from_coords(File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
-                Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical());
+                    File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
+                    Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical(),
+                ));
+                curr_click_pos = Square::from_coords(
+                    File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
+                    Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical(),
+                );
 
                 if prev_role_click == Role::Pawn && curr_click_pos.rank() == Rank::new(7) {
                     if let Ok(game_wrap) = game.to_owned().play(&Move::Normal {
@@ -254,8 +266,8 @@ pub fn init() -> Result<(), String> {
                         from: prev_click_pos,
                         to: curr_click_pos,
                         capture: curr_role_click,
-                        promotion: Some(Role::Queen)}) {
-
+                        promotion: Some(Role::Queen),
+                    }) {
                         game = game_wrap;
                     }
                 }
@@ -265,20 +277,23 @@ pub fn init() -> Result<(), String> {
                     from: prev_click_pos,
                     to: curr_click_pos,
                     capture: curr_role_click,
-                    promotion: None}) {
-
+                    promotion: None,
+                }) {
                     Ok(game_wrap) => game = game_wrap,
 
-                    Err(_) => draw_error(((curr_click_pos.file().char() as u32 - 'a' as u32) * SQR_SIZE) as i32,
-                    ((curr_click_pos.rank().flip_vertical().char() as u32 - '1' as u32) * SQR_SIZE) as i32,
-                    &mut canvas),
+                    Err(_) => draw_error(
+                        ((curr_click_pos.file().char() as u32 - 'a' as u32) * SQR_SIZE) as i32,
+                        ((curr_click_pos.rank().flip_vertical().char() as u32 - '1' as u32)
+                            * SQR_SIZE) as i32,
+                        &mut canvas,
+                    ),
                 }
 
                 if prev_role_click == Role::King {
                     if let Ok(game_wrap) = game.to_owned().play(&Move::Castle {
                         king: prev_click_pos,
-                        rook: curr_click_pos}) {
-
+                        rook: curr_click_pos,
+                    }) {
                         game = game_wrap;
                     }
                 }
@@ -286,8 +301,8 @@ pub fn init() -> Result<(), String> {
                 if prev_role_click == Role::Pawn {
                     if let Ok(game_wrap) = game.to_owned().play(&Move::EnPassant {
                         from: prev_click_pos,
-                        to: curr_click_pos}) {
-
+                        to: curr_click_pos,
+                    }) {
                         game = game_wrap;
                     }
                 }
@@ -295,19 +310,29 @@ pub fn init() -> Result<(), String> {
         }
 
         if curr_mouse_buttons.is_empty() {
-            prev_role_click = game.board().role_at(Square::from_coords(
+            prev_role_click = game
+                .board()
+                .role_at(Square::from_coords(
                     File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
-                    Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical())).unwrap_or(Role::Knight);
+                    Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical(),
+                ))
+                .unwrap_or(Role::Knight);
 
-            prev_click_pos = Square::from_coords(File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
-            Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical());
+            prev_click_pos = Square::from_coords(
+                File::new((mouse_state.x() / SQR_SIZE as i32) as u32),
+                Rank::new((mouse_state.y() / SQR_SIZE as i32) as u32).flip_vertical(),
+            );
         } else {
-
-            canvas.copy(curr_texture, None, Rect::new(
+            canvas.copy(
+                curr_texture,
+                None,
+                Rect::new(
                     (mouse_state.x() / SQR_SIZE as i32) * SQR_SIZE as i32,
                     (mouse_state.y() / SQR_SIZE as i32) * SQR_SIZE as i32,
                     SQR_SIZE,
-                    SQR_SIZE))?;
+                    SQR_SIZE,
+                ),
+            ).unwrap();
         }
 
         canvas.present();
@@ -317,8 +342,15 @@ pub fn init() -> Result<(), String> {
         // if you don't do this cpu usage will skyrocket to 100%
         events.wait_event_timeout(10);
         // events.poll_event();
+    };
+
+    if cfg!(target_os = "emscripten") {
+        emscripten_file::emscripten_mod::set_main_loop_callback(main_loop);
     }
 
+    else if cfg!(not(target_os = "emscripten")) {
+        loop { main_loop(); }
+    }
 
     Ok(())
 }
@@ -331,13 +363,23 @@ fn draw_piece(canvas: &mut Canvas<Window>, game: &Board, texture: &Texture, i: u
             texture,
             None,
             Rect::new(
-                ((game.pieces().nth(i).unwrap().0.file().char() as u32 - 'a' as u32)
-                 * SQR_SIZE) as i32,
-                 ((game.pieces().nth(i).unwrap().0.rank().flip_vertical().char() as u32 - '1' as u32)
-                  * SQR_SIZE) as i32,
-                  SQR_SIZE,
-                  SQR_SIZE,
-                  )).unwrap();
+                ((game.pieces().nth(i).unwrap().0.file().char() as u32 - 'a' as u32) * SQR_SIZE)
+                    as i32,
+                ((game
+                    .pieces()
+                    .nth(i)
+                    .unwrap()
+                    .0
+                    .rank()
+                    .flip_vertical()
+                    .char() as u32
+                    - '1' as u32)
+                    * SQR_SIZE) as i32,
+                SQR_SIZE,
+                SQR_SIZE,
+            ),
+        )
+        .unwrap();
 }
 
 // from: https://www.libsdl.org/tmp/SDL/test/testdrawchessboard.c
@@ -353,7 +395,7 @@ fn draw_grid(canvas: &mut Canvas<Window>) {
                 row * SQR_SIZE as i32,
                 SQR_SIZE,
                 SQR_SIZE,
-                );
+            );
             x += 2;
 
             let _ = canvas.fill_rect(rect);
@@ -368,11 +410,7 @@ fn draw_grid(canvas: &mut Canvas<Window>) {
 
 fn draw_error(x: i32, y: i32, canvas: &mut Canvas<Window>) {
     canvas.set_draw_color(Color::RGB(255, 5, 5));
-    let _ = canvas.fill_rect(Rect::new(
-            x,
-            y,
-            SQR_SIZE,
-            SQR_SIZE));
+    let _ = canvas.fill_rect(Rect::new(x, y, SQR_SIZE, SQR_SIZE));
     thread::sleep(time::Duration::from_millis(100));
 }
 
@@ -382,12 +420,17 @@ fn draw_check(game: &Chess, canvas: &mut Canvas<Window>) {
     let mut black_king_pos: Square = Square::new(0);
 
     for i in 0..pieces.len() {
-        pieces.to_owned().nth(i).filter(|piece| piece.1.role == Role::King).map(|piece| if piece.1.color == shakmaty::Color::White {
-            white_king_pos = piece.to_owned().0;
-        }
-        else {
-            black_king_pos = piece.to_owned().0;
-        });
+        pieces
+            .to_owned()
+            .nth(i)
+            .filter(|piece| piece.1.role == Role::King)
+            .map(|piece| {
+                if piece.1.color == shakmaty::Color::White {
+                    white_king_pos = piece.to_owned().0;
+                } else {
+                    black_king_pos = piece.to_owned().0;
+                }
+            });
     }
 
     if game.is_check() {
@@ -396,18 +439,15 @@ fn draw_check(game: &Chess, canvas: &mut Canvas<Window>) {
 
         if game.turn() == shakmaty::Color::White {
             x = ((white_king_pos.file().char() as u32 - 'a' as u32) * SQR_SIZE) as i32;
-            y = ((white_king_pos.rank().flip_vertical().char() as u32 - '1' as u32) * SQR_SIZE) as i32;
-        }
-        else {
+            y = ((white_king_pos.rank().flip_vertical().char() as u32 - '1' as u32) * SQR_SIZE)
+                as i32;
+        } else {
             x = ((black_king_pos.file().char() as u32 - 'a' as u32) * SQR_SIZE) as i32;
-            y = ((black_king_pos.rank().flip_vertical().char() as u32 - '1' as u32) * SQR_SIZE) as i32;
+            y = ((black_king_pos.rank().flip_vertical().char() as u32 - '1' as u32) * SQR_SIZE)
+                as i32;
         }
 
         canvas.set_draw_color(Color::RGB(255, 5, 5));
-        let _ = canvas.fill_rect(Rect::new(
-                x,
-                y,
-                SQR_SIZE,
-                SQR_SIZE));
+        let _ = canvas.fill_rect(Rect::new(x, y, SQR_SIZE, SQR_SIZE));
     }
 }
